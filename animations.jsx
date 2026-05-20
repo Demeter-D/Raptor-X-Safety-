@@ -341,6 +341,29 @@ function Stage({
   const [playing, setPlaying] = React.useState(autoplay);
   const [hoverTime, setHoverTime] = React.useState(null);
   const [scale, setScale] = React.useState(1);
+  const [barVisible, setBarVisible] = React.useState(true);
+  const barHideTimerRef = React.useRef(null);
+
+  // Bump bar visibility on any user interaction; hide after 2s.
+  const bumpBar = React.useCallback(() => {
+    setBarVisible(true);
+    if (barHideTimerRef.current) clearTimeout(barHideTimerRef.current);
+    barHideTimerRef.current = setTimeout(() => setBarVisible(false), 2000);
+  }, []);
+
+  React.useEffect(() => {
+    bumpBar();
+    const onAct = () => bumpBar();
+    window.addEventListener('pointermove', onAct, { passive: true });
+    window.addEventListener('pointerdown', onAct, { passive: true });
+    window.addEventListener('keydown', onAct);
+    return () => {
+      window.removeEventListener('pointermove', onAct);
+      window.removeEventListener('pointerdown', onAct);
+      window.removeEventListener('keydown', onAct);
+      if (barHideTimerRef.current) clearTimeout(barHideTimerRef.current);
+    };
+  }, [bumpBar]);
 
   const stageRef = React.useRef(null);
   const canvasRef = React.useRef(null);
@@ -466,16 +489,25 @@ function Stage({
       </div>
 
       {/* Playback bar — stacked below canvas, never overlapping */}
-      <PlaybackBar
-        time={displayTime}
-        actualTime={time}
-        duration={duration}
-        playing={playing}
-        onPlayPause={() => setPlaying(p => !p)}
-        onReset={() => { setTime(0); }}
-        onSeek={(t) => setTime(t)}
-        onHover={(t) => setHoverTime(t)}
-      />
+      <div style={{
+        width: '100%',
+        display: 'flex', justifyContent: 'center',
+        opacity: barVisible ? 1 : 0,
+        pointerEvents: barVisible ? 'auto' : 'none',
+        transition: 'opacity 300ms ease',
+        flexShrink: 0,
+      }}>
+        <PlaybackBar
+          time={displayTime}
+          actualTime={time}
+          duration={duration}
+          playing={playing}
+          onPlayPause={() => setPlaying(p => !p)}
+          onReset={() => { setTime(0); }}
+          onSeek={(t) => setTime(t)}
+          onHover={(t) => setHoverTime(t)}
+        />
+      </div>
     </div>
   );
 }
@@ -489,9 +521,20 @@ function PlaybackBar({ time, duration, playing, onPlayPause, onReset, onSeek, on
   const [dragging, setDragging] = React.useState(false);
 
   const timeFromEvent = React.useCallback((e) => {
-    const rect = trackRef.current.getBoundingClientRect();
-    const x = clamp((e.clientX - rect.left) / rect.width, 0, 1);
-    return x * duration;
+    const el = trackRef.current;
+    if (!el) return 0;
+    const rect = el.getBoundingClientRect();
+    // When the page is rotated 90° via CSS for forced-landscape on mobile,
+    // the element's original "left→right" axis maps to viewport "top→bottom".
+    // Detect this by seeing if rect is taller than wide (only true for our
+    // wide playback track when rotated).
+    let f;
+    if (rect.height > rect.width * 1.5) {
+      f = (e.clientY - rect.top) / rect.height;
+    } else {
+      f = (e.clientX - rect.left) / rect.width;
+    }
+    return clamp(f, 0, 1) * duration;
   }, [duration]);
 
   const onTrackMove = (e) => {

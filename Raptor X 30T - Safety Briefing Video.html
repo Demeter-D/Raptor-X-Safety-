@@ -36,11 +36,30 @@
     /* Stop iOS double-tap zoom + tap delays */
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+  }
+  #root {
+    position: fixed;
+    inset: 0;
     /* Respect notch / safe areas in standalone mode */
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     box-sizing: border-box;
   }
-  #root { position: fixed; inset: 0; }
+
+  /* Force-landscape on mobile when held in portrait. iOS Safari ignores the
+     manifest's orientation:landscape so we rotate the content ourselves. */
+  @media (orientation: portrait) and (max-width: 900px) {
+    #root {
+      inset: auto;
+      top: 50%;
+      left: 50%;
+      width: 100vh;
+      height: 100vw;
+      transform: translate(-50%, -50%) rotate(90deg);
+      transform-origin: center center;
+      padding: 0;
+    }
+  }
 </style>
 </head>
 <body>
@@ -143,6 +162,20 @@ root.render(<App />);
       });
     });
   }
+
+  // Try to lock orientation to landscape on supporting browsers (Android Chrome
+  // in standalone mode). iOS Safari has no API for this — the CSS rotate fallback
+  // above handles iOS portrait. Wrapped in try/catch so silently fails elsewhere.
+  function tryLockLandscape() {
+    try {
+      if (screen.orientation && typeof screen.orientation.lock === 'function') {
+        screen.orientation.lock('landscape').catch(() => {});
+      }
+    } catch (e) { /* not supported — CSS fallback applies */ }
+  }
+  // Some browsers require a user gesture first; try both eagerly and on first tap.
+  tryLockLandscape();
+  window.addEventListener('pointerdown', tryLockLandscape, { once: true });
 </script>
 </body>
 </html>

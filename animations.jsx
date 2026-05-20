@@ -329,10 +329,12 @@ function Stage({
   loop = true,
   autoplay = true,
   speed = 1,
+  resetOnLoad = false,
   persistKey = 'animstage',
   children,
 }) {
   const [time, setTime] = React.useState(() => {
+    if (resetOnLoad) return 0;
     try {
       const v = parseFloat(localStorage.getItem(persistKey + ':t') || '0');
       return isFinite(v) ? clamp(v, 0, duration) : 0;
@@ -370,10 +372,11 @@ function Stage({
   const rafRef = React.useRef(null);
   const lastTsRef = React.useRef(null);
 
-  // Persist playhead
+  // Persist playhead (unless we're configured to always reset on load).
   React.useEffect(() => {
+    if (resetOnLoad) return;
     try { localStorage.setItem(persistKey + ':t', String(time)); } catch {}
-  }, [time, persistKey]);
+  }, [time, persistKey, resetOnLoad]);
 
   // Auto-scale to fit viewport
   React.useEffect(() => {

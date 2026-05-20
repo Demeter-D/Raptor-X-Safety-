@@ -1,7 +1,7 @@
 // Raptor X Safety Briefing — service worker for offline + instant load.
 // v2: network-first for HTML/JSX/JS so updates propagate, cache-first for assets.
 
-const CACHE = 'raptor-x-briefing-v3';
+const CACHE = 'raptor-x-briefing-v4';
 
 // App-shell + assets to precache on install. Paths are RELATIVE so this works
 // under any GitHub Pages subpath.

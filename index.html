@@ -177,6 +177,26 @@ root.render(<App />);
   // Some browsers require a user gesture first; try both eagerly and on first tap.
   tryLockLandscape();
   window.addEventListener('pointerdown', tryLockLandscape, { once: true });
+
+  // Keep the screen awake while watching. Wake Lock API; iOS 16.4+, Android Chrome.
+  // Browser auto-releases when the tab is hidden — we re-acquire on visibilitychange.
+  let __wakeLock = null;
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      __wakeLock = await navigator.wakeLock.request('screen');
+      __wakeLock.addEventListener('release', () => { __wakeLock = null; });
+    } catch (err) {
+      // Often "NotAllowedError" before any user gesture — we retry on first tap.
+    }
+  }
+  requestWakeLock();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') requestWakeLock();
+  });
+  window.addEventListener('pointerdown', () => {
+    if (!__wakeLock) requestWakeLock();
+  }, { passive: true });
 </script>
 </body>
 </html>

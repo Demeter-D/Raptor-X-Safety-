@@ -383,10 +383,9 @@ function Stage({
     if (!stageRef.current) return;
     const el = stageRef.current;
     const measure = () => {
-      const barH = 44; // playback bar height
       const s = Math.min(
         el.clientWidth / width,
-        (el.clientHeight - barH) / height
+        el.clientHeight / height
       );
       setScale(Math.max(0.05, s));
     };
@@ -458,47 +457,42 @@ function Stage({
       ref={stageRef}
       style={{
         position: 'absolute', inset: 0,
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center',
+        display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
         background: '#0a0a0a',
         fontFamily: 'Inter, system-ui, sans-serif',
+        overflow: 'hidden',
       }}
     >
-      {/* Canvas area — vertically centered in remaining space */}
-      <div style={{
-        flex: 1,
-        width: '100%',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        overflow: 'hidden',
-        minHeight: 0,
-      }}>
-        <div
-          ref={canvasRef}
-          style={{
-            width, height,
-            background,
-            position: 'relative',
-            transform: `scale(${scale})`,
-            transformOrigin: 'center',
-            flexShrink: 0,
-            boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
-            overflow: 'hidden',
-          }}
-        >
-          <TimelineContext.Provider value={ctxValue}>
-            {children}
-          </TimelineContext.Provider>
-        </div>
+      {/* Canvas — fills the viewport, scaled to fit */}
+      <div
+        ref={canvasRef}
+        style={{
+          width, height,
+          background,
+          position: 'relative',
+          transform: `scale(${scale})`,
+          transformOrigin: 'center',
+          flexShrink: 0,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+          overflow: 'hidden',
+        }}
+      >
+        <TimelineContext.Provider value={ctxValue}>
+          {children}
+        </TimelineContext.Provider>
       </div>
 
-      {/* Playback bar — stacked below canvas, never overlapping */}
+      {/* Playback bar — floats over the canvas; fades with barVisible */}
       <div style={{
-        width: '100%',
+        position: 'absolute',
+        left: 0, right: 0, bottom: 0,
         display: 'flex', justifyContent: 'center',
+        padding: '0 0 12px',
         opacity: barVisible ? 1 : 0,
         pointerEvents: barVisible ? 'auto' : 'none',
         transition: 'opacity 300ms ease',
-        flexShrink: 0,
+        zIndex: 10,
       }}>
         <PlaybackBar
           time={displayTime}
